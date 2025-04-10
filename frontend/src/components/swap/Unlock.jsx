@@ -21,7 +21,10 @@ const Unlock = () => {
   });
   const [lastTransaction, setLastTransaction] = useState(null);
 
-  const { unlock, isConnected, isBaseSepolia, switchToBaseSepolia } = useBlockchain();
+  const {
+    unlock,
+    isConnected
+  } = useBlockchain();
 
   const copyToClipboard = (text, field) => {
     if (!text) return;
@@ -41,12 +44,6 @@ const Unlock = () => {
     
     if (!isConnected) {
       alert("Please connect your wallet first");
-      return;
-    }
-    
-    if (!isBaseSepolia()) {
-      alert("Please switch to Sepolia network");
-      await switchToBaseSepolia();
       return;
     }
     
@@ -130,7 +127,7 @@ const Unlock = () => {
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
                     The address of the token contract that was used in the lock.
-                    The default is Sepolia USDT.
+                    The default is USDT.
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -152,7 +149,7 @@ const Unlock = () => {
                 {copiedStates.tokenAddress ? "Copied!" : "Copy"}
               </Button>
             </div>
-            <p className="text-xs text-gray-500"> (Sepolia USDT)</p>
+            <p className="text-xs text-gray-500"> (USDT)</p>
           </div>
           
           <div className="space-y-2">

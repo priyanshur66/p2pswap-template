@@ -2,6 +2,7 @@
 
 import { useBlockchain } from '@/lib/blockchain-context';
 import { Button } from '@/components/ui/button';
+import { useState, useEffect } from 'react';
 
 const WalletConnect = () => {
   const { 
@@ -9,9 +10,21 @@ const WalletConnect = () => {
     account, 
     connectWallet, 
     disconnectWallet, 
-    isBaseSepolia,
-    switchToBaseSepolia
+    chainId,
+    getCurrentNetwork
   } = useBlockchain();
+
+  const [networkName, setNetworkName] = useState(null);
+
+  useEffect(() => {
+    if (isConnected) {
+      getCurrentNetwork().then(network => {
+        if (network) {
+          setNetworkName(network.name);
+        }
+      });
+    }
+  }, [isConnected, chainId, getCurrentNetwork]);
 
   const formatAddress = (address) => {
     if (!address) return '';
@@ -22,10 +35,10 @@ const WalletConnect = () => {
     <div className="flex flex-col sm:flex-row items-center gap-3">
       {isConnected ? (
         <>
-          <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${isBaseSepolia() ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            <span className="text-sm">
-              {isBaseSepolia() ? 'Sepolia' : 'Wrong Network'}
+          <div className="flex items-center space-x-1">
+            <div className={`w-3 h-3 rounded-full bg-green-500`}></div>
+            <span className="text-xs">
+              {networkName || 'Connected'}
             </span>
           </div>
           
@@ -37,17 +50,6 @@ const WalletConnect = () => {
             >
               {formatAddress(account)}
             </Button>
-            
-            {!isBaseSepolia() && (
-              <Button
-                onClick={switchToBaseSepolia}
-                variant="secondary"
-                size="sm"
-                className="px-3 py-2 h-auto"
-              >
-                Switch Network
-              </Button>
-            )}
             
             <Button
               onClick={disconnectWallet}

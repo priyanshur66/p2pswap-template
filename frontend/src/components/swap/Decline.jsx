@@ -13,38 +13,33 @@ const Decline = () => {
   const [timeout, setTimeout] = useState(3600); // 1 hour in seconds
   const [loading, setLoading] = useState(false);
 
-  const { decline, isConnected, isBaseSepolia, switchToBaseSepolia } = useBlockchain();
+  const {
+    decline,
+    isConnected
+  } = useBlockchain();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!isConnected) {
-      alert("Please connect your wallet first");
-      return;
-    }
-    
-    if (!isBaseSepolia()) {
-      alert("Please switch to Sepolia network");
-      await switchToBaseSepolia();
-      return;
-    }
-    
-    if (!tokenAddress || !ethers.isAddress(tokenAddress)) {
-      alert("Please enter a valid token address");
-      return;
-    }
-    
-    if (!creator || !ethers.isAddress(creator)) {
-      alert("Please enter a valid creator address");
-      return;
-    }
-    
-    if (!hashedSecret) {
-      alert("Please enter the hashed secret");
-      return;
-    }
-    
     try {
+      if (!isConnected) {
+        throw new Error("Wallet not connected");
+      }
+      
+      if (!tokenAddress || !ethers.isAddress(tokenAddress)) {
+        alert("Please enter a valid token address");
+        return;
+      }
+      
+      if (!creator || !ethers.isAddress(creator)) {
+        alert("Please enter a valid creator address");
+        return;
+      }
+      
+      if (!hashedSecret) {
+        alert("Please enter the hashed secret");
+        return;
+      }
+      
       setLoading(true);
       await decline(
         tokenAddress,

@@ -21,7 +21,11 @@ const LockBuy = () => {
   const [useRawSellPrice, setUseRawSellPrice] = useState(true); // Toggle for price format - default true for USDT
   const [loading, setLoading] = useState(false);
 
-  const { lockBuy, isConnected, isBaseSepolia, switchToBaseSepolia, account } = useBlockchain();
+  const {
+    lockBuy,
+    isConnected,
+    account
+  } = useBlockchain();
 
   // Generate hashed secret whenever secret changes
   useEffect(() => {
@@ -103,47 +107,39 @@ const LockBuy = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!isConnected) {
-      alert("Please connect your wallet first");
-      return;
-    }
-    
-    if (!isBaseSepolia()) {
-      alert("Please switch to Sepolia network");
-      await switchToBaseSepolia();
-      return;
-    }
-    
-    if (!tokenAddress || !ethers.isAddress(tokenAddress)) {
-      alert("Please enter a valid token address");
-      return;
-    }
-    
-    if (!recipient || !ethers.isAddress(recipient)) {
-      alert("Please enter a valid recipient address");
-      return;
-    }
-    
-    if (!hashedSecret) {
-      alert("Please generate a hashed secret first");
-      return;
-    }
-    
-    // Check for token value format
-    if (useRawValue && !rawTokenValue) {
-      alert("Please enter a raw token value");
-      return;
-    }
-    
-    // Check for sell price format
-    if (useRawSellPrice && !rawSellPrice) {
-      alert("Please enter a raw sell price");
-      return;
-    }
+    setLoading(true);
     
     try {
-      setLoading(true);
+      if (!isConnected) {
+        throw new Error("Wallet not connected");
+      }
+      
+      if (!tokenAddress || !ethers.isAddress(tokenAddress)) {
+        alert("Please enter a valid token address");
+        return;
+      }
+      
+      if (!recipient || !ethers.isAddress(recipient)) {
+        alert("Please enter a valid recipient address");
+        return;
+      }
+      
+      if (!hashedSecret) {
+        alert("Please generate a hashed secret first");
+        return;
+      }
+      
+      // Check for token value format
+      if (useRawValue && !rawTokenValue) {
+        alert("Please enter a raw token value");
+        return;
+      }
+      
+      // Check for sell price format
+      if (useRawSellPrice && !rawSellPrice) {
+        alert("Please enter a raw sell price");
+        return;
+      }
       
       // Use the default asset ID or the provided one
       let formattedSellAssetId = sellAssetId;
@@ -223,7 +219,7 @@ const LockBuy = () => {
               onChange={(e) => setTokenAddress(e.target.value)}
               required
             />
-            <p className="text-xs text-gray-500">Default:  (Sepolia USDT)</p>
+            <p className="text-xs text-gray-500">Default: USDT</p>
           </div>
           
           <div className="space-y-2">

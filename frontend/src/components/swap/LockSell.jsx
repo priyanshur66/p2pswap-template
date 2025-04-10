@@ -17,53 +17,47 @@ const LockSell = () => {
   const [buyLockId, setBuyLockId] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { lockSell, isConnected, isBaseSepolia, switchToBaseSepolia } = useBlockchain();
-
-
+  const {
+    lockSell,
+    isConnected
+  } = useBlockchain();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!isConnected) {
-      alert("Please connect your wallet first");
-      return;
-    }
-    
-    if (!isBaseSepolia()) {
-      alert("Please switch to Sepolia network");
-      await switchToBaseSepolia();
-      return;
-    }
-    
-    if (!tokenAddress || !ethers.isAddress(tokenAddress)) {
-      alert("Please enter a valid token address");
-      return;
-    }
-    
-    if (!recipient || !ethers.isAddress(recipient)) {
-      alert("Please enter a valid recipient address");
-      return;
-    }
-    
-    if (!hashedSecret) {
-      alert("Please generate a hashed secret first");
-      return;
-    }
-    
-    // Ensure valid format for asset ID and lock ID
-    const formattedBuyAssetId = buyAssetId && buyAssetId.trim() !== '' 
-      ? (buyAssetId.startsWith('0x') && buyAssetId.length === 66 
-          ? buyAssetId 
-          : ethers.keccak256(ethers.toUtf8Bytes(buyAssetId)))
-      : ethers.ZeroHash;
-    
-    const formattedBuyLockId = buyLockId && buyLockId.trim() !== ''
-      ? (buyLockId.startsWith('0x') && buyLockId.length === 66
-          ? buyLockId
-          : ethers.keccak256(ethers.toUtf8Bytes(buyLockId)))
-      : ethers.ZeroHash;
-    
     try {
+      if (!isConnected) {
+        throw new Error("Wallet not connected");
+      }
+      
+      if (!tokenAddress || !ethers.isAddress(tokenAddress)) {
+        alert("Please enter a valid token address");
+        return;
+      }
+      
+      if (!recipient || !ethers.isAddress(recipient)) {
+        alert("Please enter a valid recipient address");
+        return;
+      }
+      
+      if (!hashedSecret) {
+        alert("Please generate a hashed secret first");
+        return;
+      }
+      
+      // Ensure valid format for asset ID and lock ID
+      const formattedBuyAssetId = buyAssetId && buyAssetId.trim() !== '' 
+        ? (buyAssetId.startsWith('0x') && buyAssetId.length === 66 
+            ? buyAssetId 
+            : ethers.keccak256(ethers.toUtf8Bytes(buyAssetId)))
+        : ethers.ZeroHash;
+      
+      const formattedBuyLockId = buyLockId && buyLockId.trim() !== ''
+        ? (buyLockId.startsWith('0x') && buyLockId.length === 66
+            ? buyLockId
+            : ethers.keccak256(ethers.toUtf8Bytes(buyLockId)))
+        : ethers.ZeroHash;
+      
       setLoading(true);
       
       console.log("Submitting lockSell transaction with parameters:", {
