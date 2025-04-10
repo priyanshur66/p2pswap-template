@@ -25,7 +25,7 @@ const WalletConnect = () => {
           <div className="flex items-center gap-2">
             <div className={`w-3 h-3 rounded-full ${isBaseSepolia() ? 'bg-green-500' : 'bg-red-500'}`}></div>
             <span className="text-sm">
-              {isBaseSepolia() ? 'Base Sepolia' : 'Wrong Network'}
+              {isBaseSepolia() ? 'Sepolia' : 'Wrong Network'}
             </span>
           </div>
           

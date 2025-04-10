@@ -10,7 +10,7 @@ export default function Home() {
         </h1>
         
         <p className="text-xl mb-8">
-          Safely exchange tokens with hash time-locked contracts on Base Sepolia network
+          Safely exchange tokens with hash time-locked contracts on Sepolia network
         </p>
         
         <div className="space-y-8 mb-12">
@@ -48,7 +48,7 @@ export default function Home() {
       </main>
       
       <footer className="mt-16 text-gray-500 text-sm">
-        <p>Running on Base Sepolia Testnet</p>
+        <p>Running on Sepolia Testnet</p>
         <p className="mt-2">Contract address : {swapAddress}</p>
       </footer>
     </div>

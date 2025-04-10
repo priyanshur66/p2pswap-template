@@ -96,7 +96,7 @@ const SecretGenerator = () => {
               onChange={(e) => setCustomToken(e.target.value)}
               placeholder=""
             />
-            <p className="text-xs text-gray-500">Default: USDT on Base Sepolia</p>
+            <p className="text-xs text-gray-500">Default: USDT on Sepolia</p>
           </div>
           
           <div className="space-y-2">

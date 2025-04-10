@@ -110,7 +110,7 @@ const LockBuy = () => {
     }
     
     if (!isBaseSepolia()) {
-      alert("Please switch to Base Sepolia network");
+      alert("Please switch to Sepolia network");
       await switchToBaseSepolia();
       return;
     }

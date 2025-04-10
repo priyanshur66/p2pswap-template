@@ -836,9 +836,9 @@ export function BlockchainProvider({ children }) {
     }
   };
 
-  // Check if Base Sepolia network
+  // Check if Sepolia network
   const isBaseSepolia = () => {
-    return chainId && chainId === 84532n; // Base Sepolia testnet chainId
+    return chainId && chainId === 11155111n; // Sepolia testnet chainId
   };
 
   const switchToBaseSepolia = async () => {
@@ -847,7 +847,7 @@ export function BlockchainProvider({ children }) {
     try {
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0x14a34' }], // 84532 in hex
+        params: [{ chainId: '0xaa36a7' }], // 11155111 in hex
       });
     } catch (switchError) {
       // This error code indicates that the chain has not been added to MetaMask
@@ -857,20 +857,20 @@ export function BlockchainProvider({ children }) {
             method: 'wallet_addEthereumChain',
             params: [
               {
-                chainId: '0x14a34',
-                chainName: 'Base Sepolia',
+                chainId: '0xaa36a7',
+                chainName: 'Sepolia',
                 nativeCurrency: {
                   name: 'ETH',
                   symbol: 'ETH',
                   decimals: 18,
                 },
-                rpcUrls: ['https://sepolia.base.org'],
-                blockExplorerUrls: ['https://sepolia.basescan.org'],
+                rpcUrls: ['https://sepolia.infura.io/v3/'],
+                blockExplorerUrls: ['https://sepolia.etherscan.io'],
               },
             ],
           });
         } catch (addError) {
-          console.error("Error adding Base Sepolia chain:", addError);
+          console.error("Error adding Sepolia chain:", addError);
         }
       }
     }
