@@ -19,6 +19,66 @@ export function BlockchainProvider({ children }) {
   const [events, setEvents] = useState([]);
   const { toast } = useToast();
 
+  // Set up wallet event listeners
+  const setupWalletEventListeners = () => {
+    if (!window.ethereum) return;
+    
+    console.log("Setting up wallet event listeners");
+    
+    // Handle account changes
+    const handleAccountsChanged = (accounts) => {
+      console.log("Accounts changed:", accounts);
+      // Immediately clear events when account changes
+      setEvents([]);
+      
+      if (accounts.length > 0) {
+        setAccount(accounts[0]);
+        
+        // If we already have a contract, refresh events for the new account
+        if (swapContract) {
+          console.log("Account changed, refreshing events");
+          setTimeout(() => {
+            try {
+              // Re-setup listeners for the new account
+              listenForEvents(swapContract);
+              // Fetch past events for the new account
+              fetchPastEvents(swapContract)
+                .then(pastEvents => {
+                  if (pastEvents && pastEvents.length > 0) {
+                    console.log(`Setting ${pastEvents.length} events after account change`);
+                    setEvents(pastEvents);
+                  }
+                })
+                .catch(error => {
+                  console.error("Error fetching events after account change:", error);
+                });
+            } catch (error) {
+              console.error("Error refreshing after account change:", error);
+            }
+          }, 100);
+        }
+      } else {
+        disconnectWallet();
+      }
+    };
+    
+    // Handle chain changes
+    const handleChainChanged = (_chainId) => {
+      console.log("Chain changed to:", _chainId);
+      window.location.reload();
+    };
+    
+    // Remove existing listeners first to avoid duplicates
+    window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+    window.ethereum.removeListener('chainChanged', handleChainChanged);
+    
+    // Add listeners
+    window.ethereum.on('accountsChanged', handleAccountsChanged);
+    window.ethereum.on('chainChanged', handleChainChanged);
+    
+    console.log("Wallet event listeners set up successfully");
+  };
+
   // Connect to wallet
   const connectWallet = async () => {
     if (window.ethereum) {
@@ -38,6 +98,9 @@ export function BlockchainProvider({ children }) {
         setSwapContract(swapContract);
         setAccount(accounts[0]);
         setIsConnected(true);
+
+        // Set up wallet event listeners after successful connection
+        setupWalletEventListeners();
 
         toast({
           title: "Wallet Connected",
@@ -1173,57 +1236,17 @@ export function BlockchainProvider({ children }) {
       
       checkConnection();
       
-      // Listen for account changes
-      const handleAccountsChanged = (accounts) => {
-        console.log("Accounts changed:", accounts);
-        // Immediately clear events when account changes
-        setEvents([]);
-        
-        if (accounts.length > 0) {
-          setAccount(accounts[0]);
-          
-          // If we already have a contract, refresh events for the new account
-          if (swapContract) {
-            console.log("Account changed, refreshing events");
-            setTimeout(() => {
-              try {
-                // Re-setup listeners for the new account
-                listenForEvents(swapContract);
-                // Fetch past events for the new account
-                fetchPastEvents(swapContract)
-                  .then(pastEvents => {
-                    if (pastEvents && pastEvents.length > 0) {
-                      console.log(`Setting ${pastEvents.length} events after account change`);
-                      setEvents(pastEvents);
-                    }
-                  })
-                  .catch(error => {
-                    console.error("Error fetching events after account change:", error);
-                  });
-              } catch (error) {
-                console.error("Error refreshing after account change:", error);
-              }
-            }, 100);
-          }
-        } else {
-          disconnectWallet();
+      // Set up wallet event listeners on initial load
+      setupWalletEventListeners();
+      
+      // Add cleanup function for wallet event listeners
+      cleanupFunctions.push(() => {
+        if (window.ethereum) {
+          // Use the same handler references to ensure proper cleanup
+          console.log("Removing wallet event listeners");
+          window.ethereum.removeAllListeners('accountsChanged');
+          window.ethereum.removeAllListeners('chainChanged');
         }
-      };
-      
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-      cleanupFunctions.push(() => {
-        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-      });
-      
-      // Listen for chain changes
-      const handleChainChanged = (_chainId) => {
-        console.log("Chain changed to:", _chainId);
-        window.location.reload();
-      };
-      
-      window.ethereum.on('chainChanged', handleChainChanged);
-      cleanupFunctions.push(() => {
-        window.ethereum.removeListener('chainChanged', handleChainChanged);
       });
     } else {
       console.log("No Ethereum provider found");

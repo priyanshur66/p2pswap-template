@@ -1,7 +1,7 @@
 import { useBlockchain } from '@/lib/blockchain-context';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Copy, CheckCircle2, Unlock as UnlockIcon, X as XIcon } from 'lucide-react';
+import { RefreshCw, Copy, CheckCircle2, Unlock as UnlockIcon, X as XIcon, User, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const EventsList = () => {
@@ -14,10 +14,10 @@ const EventsList = () => {
   const [decliningEvent, setDecliningEvent] = useState(null);
   const [declineStatus, setDeclineStatus] = useState(null);
 
-  // Filter events to only show where the recipient is the logged-in account
-  const recipientEvents = events.filter(event => 
-    event.recipient && event.recipient.toLowerCase() === account?.toLowerCase()
-    
+  // Filter events to show both where the user is recipient or creator
+  const userEvents = events.filter(event => 
+    (event.recipient && event.recipient.toLowerCase() === account?.toLowerCase()) ||
+    (event.creator && event.creator.toLowerCase() === account?.toLowerCase())
   );
 
   // Refresh when account changes
@@ -30,9 +30,9 @@ const EventsList = () => {
   // Add debugging info
   useEffect(() => {
     console.log('EventsList - All events:', events.length);
-    console.log('EventsList - Recipient events:', recipientEvents.length);
+    console.log('EventsList - User events:', userEvents.length);
     console.log('EventsList - Current account:', account);
-  }, [events, recipientEvents, account]);
+  }, [events, userEvents, account]);
   
   // Function to handle manual refresh
   const handleRefresh = async () => {
@@ -211,6 +211,26 @@ const EventsList = () => {
     }
   };
 
+  // Check if user is creator of an event
+  const isUserCreator = (event) => {
+    return event.creator && event.creator.toLowerCase() === account?.toLowerCase();
+  };
+
+  // Check if user is recipient of an event
+  const isUserRecipient = (event) => {
+    return event.recipient && event.recipient.toLowerCase() === account?.toLowerCase();
+  };
+
+  // Get user role label for the event
+  const getUserRoleLabel = (event) => {
+    if (isUserCreator(event)) {
+      return "You are the creator";
+    } else if (isUserRecipient(event)) {
+      return "You are the recipient";
+    }
+    return "";
+  };
+
   // Create copy button component
   const CopyButton = ({ text, fieldId }) => (
     <button
@@ -244,7 +264,7 @@ const EventsList = () => {
   return (
     <Card className="w-full">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Your Recipient Events</CardTitle>
+        <CardTitle>Your Events</CardTitle>
         <Button 
           variant="outline" 
           size="sm" 
@@ -259,8 +279,8 @@ const EventsList = () => {
         <div className="space-y-4">
           {!isConnected ? (
             <p className="text-sm text-muted-foreground">Connect your wallet to see events</p>
-          ) : recipientEvents.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No recipient events to display</p>
+          ) : userEvents.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No events to display</p>
           ) : (
             <>
               {/* Unlock Dialog */}
@@ -379,13 +399,28 @@ const EventsList = () => {
                 </div>
               )}
 
-              {recipientEvents.map((event, index) => (
+              {userEvents.map((event, index) => (
                 <div 
                   key={index} 
                   className={`p-4 rounded-md border ${getEventColor(event.type)}`}
                 >
                   <div className="flex justify-between items-start mb-3">
-                    <h4 className="font-semibold text-lg">{event.type}</h4>
+                    <div>
+                      <h4 className="font-semibold text-lg">{event.type}</h4>
+                      <div className="flex items-center mt-1 text-sm text-gray-600">
+                        {isUserCreator(event) ? (
+                          <div className="flex items-center">
+                            <User className="h-3 w-3 mr-1" />
+                            <span>You created this event</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <UserPlus className="h-3 w-3 mr-1" />
+                            <span>You are the recipient</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                     <span className="text-xs text-gray-500">{formatTimestamp(event.timestamp)}</span>
                   </div>
                   
@@ -466,8 +501,8 @@ const EventsList = () => {
                       fieldId={`event-${index}`}
                     />
                     
-                    {/* LockBuy and LockSell events can be unlocked or declined */}
-                    {(event.type === 'LockBuy' || event.type === 'LockSell') && (
+                    {/* Only show unlock/decline buttons for LockBuy and LockSell events where user is the recipient */}
+                    {(event.type === 'LockBuy' || event.type === 'LockSell') && isUserRecipient(event) && (
                       <div className="pt-3 mt-2 flex space-x-2">
                         <Button 
                           onClick={() => handleUnlock(event)}
@@ -495,10 +530,10 @@ const EventsList = () => {
           )}
         </div>
       </CardContent>
-      {isConnected && recipientEvents.length > 0 && (
+      {isConnected && userEvents.length > 0 && (
         <CardFooter>
           <p className="text-xs text-muted-foreground">
-            Showing {recipientEvents.length} recipient event{recipientEvents.length !== 1 ? 's' : ''}
+            Showing {userEvents.length} event{userEvents.length !== 1 ? 's' : ''}
           </p>
         </CardFooter>
       )}
