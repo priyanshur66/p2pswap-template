@@ -161,13 +161,8 @@ const LockBuy = () => {
       // Format timeout properly - could be either seconds from now or a specific timestamp
       let timeoutValue = Number(timeout);
       
-      // If timeout is too small, assume it's seconds from now rather than a timestamp
-      const currentTime = Math.floor(Date.now() / 1000); // Current Unix timestamp
-      if (timeoutValue < currentTime) {
-        // If timeout is small, assume it's seconds from now
-        timeoutValue = currentTime + timeoutValue;
-        console.log(`Timeout interpreted as seconds from now. New timeout: ${timeoutValue}`);
-      }
+      // Simply use the timeout value as is without any adjustments
+      console.log("Using raw timeout value:", timeoutValue);
       
       // Use either the ETH value or the raw token value
       const valueToUse = useRawValue ? rawTokenValue : value;
@@ -275,8 +270,7 @@ const LockBuy = () => {
               required
             />
             <p className="text-xs text-gray-500">
-              Number of seconds before the lock expires. Small values (e.g., 3600) are treated as duration from now. 
-              Large values are treated as Unix timestamps.
+              Enter the exact timeout value in seconds. This value will be used directly as the lock timeout.
             </p>
           </div>
           
