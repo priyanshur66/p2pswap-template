@@ -1,3 +1,5 @@
+"use client";
+
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import LockBuy from "./LockBuy";
 import LockSell from "./LockSell";

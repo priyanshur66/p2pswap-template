@@ -29,12 +29,12 @@ const Retrieve = () => {
       return;
     }
     
-    if (!tokenAddress || !ethers.utils.isAddress(tokenAddress)) {
+    if (!tokenAddress || !ethers.isAddress(tokenAddress)) {
       alert("Please enter a valid token address");
       return;
     }
     
-    if (!recipient || !ethers.utils.isAddress(recipient)) {
+    if (!recipient || !ethers.isAddress(recipient)) {
       alert("Please enter a valid recipient address");
       return;
     }

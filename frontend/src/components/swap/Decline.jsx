@@ -29,12 +29,12 @@ const Decline = () => {
       return;
     }
     
-    if (!tokenAddress || !ethers.utils.isAddress(tokenAddress)) {
+    if (!tokenAddress || !ethers.isAddress(tokenAddress)) {
       alert("Please enter a valid token address");
       return;
     }
     
-    if (!creator || !ethers.utils.isAddress(creator)) {
+    if (!creator || !ethers.isAddress(creator)) {
       alert("Please enter a valid creator address");
       return;
     }

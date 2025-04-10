@@ -1,3 +1,5 @@
+"use client";
+
 import { useBlockchain } from '@/lib/blockchain-context';
 import { Button } from '@/components/ui/button';
 

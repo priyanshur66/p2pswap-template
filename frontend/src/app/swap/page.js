@@ -1,14 +1,11 @@
-"use client";
-
-import { BlockchainProvider } from "@/lib/blockchain-context";
+import { ClientProviders } from "@/components/providers/ClientProviders";
 import WalletConnect from "@/components/swap/WalletConnect";
 import SwapTabs from "@/components/swap/SwapTabs";
 import EventsList from "@/components/swap/EventsList";
-import { Toaster } from "@/components/ui/toaster";
 
 export default function SwapPage() {
   return (
-    <BlockchainProvider>
+    <ClientProviders>
       <div className="min-h-screen p-4 md:p-8">
         <header className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold">P2P Token Swap</h1>
@@ -26,7 +23,6 @@ export default function SwapPage() {
           </div>
         </main>
       </div>
-      <Toaster />
-    </BlockchainProvider>
+    </ClientProviders>
   );
 } 
