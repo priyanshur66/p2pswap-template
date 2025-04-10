@@ -34,31 +34,53 @@ export function BlockchainProvider({ children }) {
       setEvents([]);
       
       if (accounts.length > 0) {
-        setAccount(accounts[0]);
-        
-        // If we already have a contract, refresh events for the new account
-        if (swapContract) {
-          console.log("Account changed, refreshing events");
-          setTimeout(() => {
-            try {
-              // Re-setup listeners for the new account
-              listenForEvents(swapContract);
-              // Fetch past events for the new account
-              fetchPastEvents(swapContract)
-                .then(pastEvents => {
-                  if (pastEvents && pastEvents.length > 0) {
-                    console.log(`Setting ${pastEvents.length} events after account change`);
-                    setEvents(pastEvents);
-                  }
-                })
-                .catch(error => {
-                  console.error("Error fetching events after account change:", error);
-                });
-            } catch (error) {
-              console.error("Error refreshing after account change:", error);
-            }
-          }, 100);
-        }
+        // Completely reinitialize everything when account changes
+        (async () => {
+          try {
+            console.log("Reinitializing provider, signer, and contract for new account");
+            
+            // Create a fresh provider
+            const newProvider = new ethers.BrowserProvider(window.ethereum);
+            
+            // Get network
+            const network = await newProvider.getNetwork();
+            setChainId(network.chainId);
+            
+            // Create a fresh signer for the new account
+            const newSigner = await newProvider.getSigner();
+            
+            // Create a fresh contract
+            const newSwapContract = new ethers.Contract(swapAddress, swapAbi, newSigner);
+            
+            // Set all state
+            setProvider(newProvider);
+            setSigner(newSigner);
+            setSwapContract(newSwapContract);
+            setAccount(accounts[0]);
+            
+            console.log("New signer address:", await newSigner.getAddress());
+            console.log("Updated state with new account:", accounts[0]);
+            
+            // Set up fresh event listeners with the new contract
+            listenForEvents(newSwapContract);
+            
+            // Fetch past events for the new account
+            fetchPastEvents(newSwapContract)
+              .then(pastEvents => {
+                if (pastEvents && pastEvents.length > 0) {
+                  console.log(`Setting ${pastEvents.length} events after account change`);
+                  setEvents(pastEvents);
+                }
+              })
+              .catch(error => {
+                console.error("Error fetching events after account change:", error);
+              });
+          } catch (error) {
+            console.error("Error reinitializing after account change:", error);
+            // In case of critical failure, try to disconnect
+            disconnectWallet();
+          }
+        })();
       } else {
         disconnectWallet();
       }
@@ -176,7 +198,12 @@ export function BlockchainProvider({ children }) {
       return;
     }
 
-    console.log("Setting up event listeners for contract", contract.target);
+    // If there's no account, we can't properly filter events
+    if (!account) {
+      console.warn("No account set, cannot properly filter events");
+    }
+
+    console.log("Setting up event listeners for contract", contract.target, "with account", account);
     
     // Cleanup existing listeners to avoid duplicates
     try {
@@ -195,6 +222,15 @@ export function BlockchainProvider({ children }) {
     console.log("Event filters created:", { 
       lockBuyFilter, lockSellFilter, unlockFilter, retrieveFilter, declineFilter 
     });
+
+    // Helper to check if the event is relevant to current account
+    const isEventForCurrentAccount = (creator, recipient) => {
+      if (!account) return true; // If no account is set, consider all events
+      return (
+        creator?.toLowerCase() === account?.toLowerCase() || 
+        recipient?.toLowerCase() === account?.toLowerCase()
+      );
+    };
 
     contract.on(lockBuyFilter, (token, creator, recipient, hashedSecret, timeout, value, sellAssetId, sellPrice, lockId) => {
       console.log("LockBuy event received:", { token, creator, recipient, hashedSecret, timeout: Number(timeout), value: value.toString(), sellAssetId, sellPrice: sellPrice.toString(), lockId });
@@ -218,7 +254,7 @@ export function BlockchainProvider({ children }) {
         return [newEvent, ...prev];
       });
       
-      if (creator.toLowerCase() === account?.toLowerCase() || recipient.toLowerCase() === account?.toLowerCase()) {
+      if (isEventForCurrentAccount(creator, recipient)) {
         toast({
           title: "New Lock Buy",
           description: `A new lock buy has been created with ID: ${lockId.substring(0, 10)}...`,
@@ -242,7 +278,7 @@ export function BlockchainProvider({ children }) {
       
       setEvents(prev => [newEvent, ...prev]);
       
-      if (creator.toLowerCase() === account?.toLowerCase() || recipient.toLowerCase() === account?.toLowerCase()) {
+      if (isEventForCurrentAccount(creator, recipient)) {
         toast({
           title: "New Lock Sell",
           description: `A new lock sell has been created for asset: ${buyAssetId.substring(0, 10)}...`,
@@ -263,7 +299,7 @@ export function BlockchainProvider({ children }) {
       
       setEvents(prev => [newEvent, ...prev]);
       
-      if (creator.toLowerCase() === account?.toLowerCase() || recipient.toLowerCase() === account?.toLowerCase()) {
+      if (isEventForCurrentAccount(creator, recipient)) {
         toast({
           title: "Lock Unlocked",
           description: `Lock with ID: ${lockId.substring(0, 10)}... has been unlocked`,
@@ -283,7 +319,7 @@ export function BlockchainProvider({ children }) {
       
       setEvents(prev => [newEvent, ...prev]);
       
-      if (creator.toLowerCase() === account?.toLowerCase() || recipient.toLowerCase() === account?.toLowerCase()) {
+      if (isEventForCurrentAccount(creator, recipient)) {
         toast({
           title: "Lock Retrieved",
           description: `Lock with ID: ${lockId.substring(0, 10)}... has been retrieved`,
@@ -303,7 +339,7 @@ export function BlockchainProvider({ children }) {
       
       setEvents(prev => [newEvent, ...prev]);
       
-      if (creator.toLowerCase() === account?.toLowerCase() || recipient.toLowerCase() === account?.toLowerCase()) {
+      if (isEventForCurrentAccount(creator, recipient)) {
         toast({
           title: "Lock Declined",
           description: `Lock with ID: ${lockId.substring(0, 10)}... has been declined`,
@@ -313,9 +349,47 @@ export function BlockchainProvider({ children }) {
   };
 
   // Create token contract instance
-  const getTokenContract = (tokenAddress) => {
+  const getTokenContract = async (tokenAddress) => {
     if (!signer) return null;
-    return new ethers.Contract(tokenAddress, erc20Abi, signer);
+    
+    // Verify and potentially update signer before creating contract
+    const verifiedSigner = await verifySigner();
+    if (!verifiedSigner) return null;
+    
+    return new ethers.Contract(tokenAddress, erc20Abi, verifiedSigner);
+  };
+
+  // Helper function to verify signer matches current account
+  const verifySigner = async () => {
+    if (!signer || !account || !provider) return false;
+    
+    try {
+      const signerAddress = await signer.getAddress();
+      console.log("Verifying signer address matches account:", {
+        signerAddress,
+        account
+      });
+      
+      if (signerAddress.toLowerCase() !== account.toLowerCase()) {
+        console.warn("Signer address doesn't match current account, reinitializing contract");
+        
+        // Create a fresh signer and contract
+        const newSigner = await provider.getSigner();
+        const newSwapContract = new ethers.Contract(swapAddress, swapAbi, newSigner);
+        
+        // Update state
+        setSigner(newSigner);
+        setSwapContract(newSwapContract);
+        
+        console.log("Updated signer and contract to match current account");
+        return newSigner;
+      }
+      
+      return signer;
+    } catch (error) {
+      console.error("Error verifying signer:", error);
+      return false;
+    }
   };
 
   // Lock Buy function
@@ -330,6 +404,9 @@ export function BlockchainProvider({ children }) {
     }
 
     try {
+      // Verify signer matches the current account
+      await verifySigner();
+      
       // Format values to match contract expectations
       let valueWei;
       try {
@@ -385,7 +462,7 @@ export function BlockchainProvider({ children }) {
       console.log("Using raw timeout value:", timeoutInt);
       
       // Get token contract
-      const tokenContract = getTokenContract(tokenAddress);
+      const tokenContract = await getTokenContract(tokenAddress);
       if (!tokenContract) {
         throw new Error("Failed to create token contract instance");
       }
@@ -555,6 +632,9 @@ export function BlockchainProvider({ children }) {
     }
 
     try {
+      // Verify signer matches the current account
+      await verifySigner();
+      
       // Format values to match contract expectations
       let valueWei;
       if (useRawValue) {
@@ -591,7 +671,7 @@ export function BlockchainProvider({ children }) {
       });
 
       // Get token contract
-      const tokenContract = getTokenContract(tokenAddress);
+      const tokenContract = await getTokenContract(tokenAddress);
       
       // Check existing allowance
       const currentAllowance = await tokenContract.allowance(account, swapAddress);
@@ -680,6 +760,9 @@ export function BlockchainProvider({ children }) {
     }
 
     try {
+      // Verify signer matches the current account
+      await verifySigner();
+      
       // Convert timeout to integer
       const timeoutInt = Math.floor(Number(timeout));
       
@@ -729,6 +812,9 @@ export function BlockchainProvider({ children }) {
     }
 
     try {
+      // Verify signer matches the current account
+      await verifySigner();
+    
       // Convert timeout to integer
       const timeoutInt = Math.floor(Number(timeout));
       
@@ -778,6 +864,9 @@ export function BlockchainProvider({ children }) {
     }
 
     try {
+      // Verify signer matches the current account
+      await verifySigner();
+      
       // Convert timeout to integer
       const timeoutInt = Math.floor(Number(timeout));
       
@@ -833,6 +922,52 @@ export function BlockchainProvider({ children }) {
     } catch (error) {
       console.error("Error getting lock value:", error);
       return "0";
+    }
+  };
+
+  // Get token balance for a specific address
+  const getTokenBalance = async (tokenAddress) => {
+    if (!signer || !account || !provider) return { balance: "0", decimals: 18, symbol: "" };
+    
+    try {
+      // Verify signer matches the current account
+      await verifySigner();
+      
+      // Get token contract
+      const tokenContract = await getTokenContract(tokenAddress);
+      if (!tokenContract) {
+        throw new Error("Failed to create token contract instance");
+      }
+      
+      // Get token info
+      let tokenSymbol = "";
+      let tokenDecimals = 18;
+      
+      try {
+        tokenSymbol = await tokenContract.symbol();
+      } catch (symbolError) {
+        console.warn("Could not fetch token symbol:", symbolError);
+        tokenSymbol = "???";
+      }
+      
+      try {
+        tokenDecimals = await tokenContract.decimals();
+      } catch (decimalsError) {
+        console.warn("Could not fetch token decimals, assuming 18:", decimalsError);
+      }
+      
+      // Get token balance
+      const balance = await tokenContract.balanceOf(account);
+      
+      return {
+        balance: balance.toString(),
+        decimals: tokenDecimals,
+        symbol: tokenSymbol,
+        formatted: ethers.formatUnits(balance, tokenDecimals)
+      };
+    } catch (error) {
+      console.error("Error getting token balance:", error);
+      return { balance: "0", decimals: 18, symbol: "", formatted: "0" };
     }
   };
 
@@ -1254,6 +1389,7 @@ export function BlockchainProvider({ children }) {
     calculateLockId,
     getLockValue,
     getTokenContract,
+    getTokenBalance,
     getCurrentNetwork,
     fetchPastEvents,
     refreshEvents

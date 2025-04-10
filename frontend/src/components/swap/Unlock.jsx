@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,8 @@ const Unlock = () => {
   const [secret, setSecret] = useState('');
   const [timeout, setTimeout] = useState(3600); // 1 hour in seconds
   const [loading, setLoading] = useState(false);
+  const [tokenBalance, setTokenBalance] = useState(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
   const [copiedStates, setCopiedStates] = useState({
     secret: false,
     creator: false,
@@ -23,8 +25,35 @@ const Unlock = () => {
 
   const {
     unlock,
-    isConnected
+    isConnected,
+    getTokenBalance
   } = useBlockchain();
+
+  // Fetch token balance when tokenAddress changes
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (tokenAddress && ethers.isAddress(tokenAddress) && isConnected) {
+        setBalanceLoading(true);
+        try {
+          const balance = await getTokenBalance(tokenAddress);
+          setTokenBalance(balance);
+        } catch (error) {
+          console.error("Error fetching token balance:", error);
+          setTokenBalance(null);
+        } finally {
+          setBalanceLoading(false);
+        }
+      } else {
+        setTokenBalance(null);
+      }
+    };
+    
+    fetchBalance();
+  }, [tokenAddress, isConnected, getTokenBalance]);
+
+  const handleTokenAddressChange = (e) => {
+    setTokenAddress(e.target.value);
+  };
 
   const copyToClipboard = (text, field) => {
     if (!text) return;
@@ -137,7 +166,7 @@ const Unlock = () => {
                 id="tokenAddress"
                 placeholder=""
                 value={tokenAddress}
-                onChange={(e) => setTokenAddress(e.target.value)}
+                onChange={handleTokenAddressChange}
                 required
               />
               <Button 
@@ -149,7 +178,15 @@ const Unlock = () => {
                 {copiedStates.tokenAddress ? "Copied!" : "Copy"}
               </Button>
             </div>
-            <p className="text-xs text-gray-500"> (USDT)</p>
+            {balanceLoading ? (
+              <p className="text-xs text-gray-500">Loading balance...</p>
+            ) : tokenBalance ? (
+              <p className="text-xs text-gray-500">
+                Balance: {tokenBalance.formatted} {tokenBalance.symbol}
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500">(USDT)</p>
+            )}
           </div>
           
           <div className="space-y-2">

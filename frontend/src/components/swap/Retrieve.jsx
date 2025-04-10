@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,11 +12,40 @@ const Retrieve = () => {
   const [hashedSecret, setHashedSecret] = useState('');
   const [timeout, setTimeout] = useState(3600); // 1 hour in seconds
   const [loading, setLoading] = useState(false);
+  const [tokenBalance, setTokenBalance] = useState(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
 
   const {
     retrieve,
-    isConnected
+    isConnected,
+    getTokenBalance
   } = useBlockchain();
+
+  // Fetch token balance when tokenAddress changes
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (tokenAddress && ethers.isAddress(tokenAddress) && isConnected) {
+        setBalanceLoading(true);
+        try {
+          const balance = await getTokenBalance(tokenAddress);
+          setTokenBalance(balance);
+        } catch (error) {
+          console.error("Error fetching token balance:", error);
+          setTokenBalance(null);
+        } finally {
+          setBalanceLoading(false);
+        }
+      } else {
+        setTokenBalance(null);
+      }
+    };
+    
+    fetchBalance();
+  }, [tokenAddress, isConnected, getTokenBalance]);
+
+  const handleTokenAddressChange = (e) => {
+    setTokenAddress(e.target.value);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -70,9 +99,18 @@ const Retrieve = () => {
               id="tokenAddress"
               placeholder="0x..."
               value={tokenAddress}
-              onChange={(e) => setTokenAddress(e.target.value)}
+              onChange={handleTokenAddressChange}
               required
             />
+            {balanceLoading ? (
+              <p className="text-xs text-gray-500">Loading balance...</p>
+            ) : tokenBalance ? (
+              <p className="text-xs text-gray-500">
+                Balance: {tokenBalance.formatted} {tokenBalance.symbol}
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500">Enter token address to see balance</p>
+            )}
           </div>
           
           <div className="space-y-2">

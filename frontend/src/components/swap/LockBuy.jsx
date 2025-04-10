@@ -20,11 +20,14 @@ const LockBuy = () => {
   const [rawSellPrice, setRawSellPrice] = useState('1000000'); // Default raw sell price (1 USDT with 6 decimals)
   const [useRawSellPrice, setUseRawSellPrice] = useState(true); // Toggle for price format - default true for USDT
   const [loading, setLoading] = useState(false);
+  const [tokenBalance, setTokenBalance] = useState(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
 
   const {
     lockBuy,
     isConnected,
-    account
+    account,
+    getTokenBalance
   } = useBlockchain();
 
   // Generate hashed secret whenever secret changes
@@ -33,6 +36,28 @@ const LockBuy = () => {
       generateHashedSecret();
     }
   }, [secret]);
+  
+  // Fetch token balance when tokenAddress changes
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (tokenAddress && ethers.isAddress(tokenAddress) && isConnected) {
+        setBalanceLoading(true);
+        try {
+          const balance = await getTokenBalance(tokenAddress);
+          setTokenBalance(balance);
+        } catch (error) {
+          console.error("Error fetching token balance:", error);
+          setTokenBalance(null);
+        } finally {
+          setBalanceLoading(false);
+        }
+      } else {
+        setTokenBalance(null);
+      }
+    };
+    
+    fetchBalance();
+  }, [tokenAddress, isConnected, getTokenBalance]);
   
   // Set standard USDT values for common amounts
   const setUsdtAmount = (amount) => {
@@ -200,6 +225,10 @@ const LockBuy = () => {
     setSecret(e.target.value);
   };
 
+  const handleTokenAddressChange = (e) => {
+    setTokenAddress(e.target.value);
+  };
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
@@ -216,10 +245,18 @@ const LockBuy = () => {
               id="tokenAddress"
               placeholder="0x"
               value={tokenAddress}
-              onChange={(e) => setTokenAddress(e.target.value)}
+              onChange={handleTokenAddressChange}
               required
             />
-            <p className="text-xs text-gray-500">Default: USDT</p>
+            {balanceLoading ? (
+              <p className="text-xs text-gray-500">Loading balance...</p>
+            ) : tokenBalance ? (
+              <p className="text-xs text-gray-500">
+                Balance: {tokenBalance.formatted} {tokenBalance.symbol}
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500">Default: USDT</p>
+            )}
           </div>
           
           <div className="space-y-2">
