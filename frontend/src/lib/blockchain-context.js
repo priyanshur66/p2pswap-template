@@ -315,12 +315,9 @@ export function BlockchainProvider({ children }) {
         console.log("Generated hash for sellAssetId:", formattedSellAssetId);
       }
       
-      // For lockBuy, add timeout to current time instead of using it directly
-      const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
-      const timeoutInt = currentTime + Math.floor(Number(timeout));
-      console.log("Current time:", currentTime);
-      console.log("Timeout value (seconds from now):", Math.floor(Number(timeout)));
-      console.log("Final timeout timestamp:", timeoutInt);
+      // Pass timeout directly without adding current time
+      const timeoutInt = Math.floor(Number(timeout));
+      console.log("Using raw timeout value:", timeoutInt);
       
       // Get token contract
       const tokenContract = getTokenContract(tokenAddress);

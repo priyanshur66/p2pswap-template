@@ -17,6 +17,7 @@ const EventsList = () => {
   // Filter events to only show where the recipient is the logged-in account
   const recipientEvents = events.filter(event => 
     event.recipient && event.recipient.toLowerCase() === account?.toLowerCase()
+    
   );
 
   // Refresh when account changes

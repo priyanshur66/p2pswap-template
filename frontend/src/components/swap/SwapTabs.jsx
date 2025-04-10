@@ -9,13 +9,13 @@ import SecretGenerator from "./SecretGenerator";
 const SwapTabs = () => {
   return (
     <Tabs defaultValue="lockBuy" className="w-full max-w-lg mx-auto">
-      <TabsList className="grid grid-cols-6 w-full">
+      <TabsList className="grid grid-cols-3 w-full">
         <TabsTrigger value="lockBuy">Buy</TabsTrigger>
         <TabsTrigger value="lockSell">Sell</TabsTrigger>
-        <TabsTrigger value="unlock">Unlock</TabsTrigger>
+        {/* <TabsTrigger value="unlock">Unlock</TabsTrigger> */}
         <TabsTrigger value="retrieve">Retrieve</TabsTrigger>
-        <TabsTrigger value="decline">Decline</TabsTrigger>
-        <TabsTrigger value="secretGen">Secret</TabsTrigger>
+        {/* <TabsTrigger value="decline">Decline</TabsTrigger> */}
+        {/* <TabsTrigger value="secretGen">Secret</TabsTrigger> */}
       </TabsList>
       <TabsContent value="lockBuy">
         <LockBuy />
@@ -23,18 +23,18 @@ const SwapTabs = () => {
       <TabsContent value="lockSell">
         <LockSell />
       </TabsContent>
-      <TabsContent value="unlock">
+      {/* <TabsContent value="unlock">
         <Unlock />
-      </TabsContent>
+      </TabsContent> */}
       <TabsContent value="retrieve">
         <Retrieve />
       </TabsContent>
-      <TabsContent value="decline">
+      {/* <TabsContent value="decline">
         <Decline />
-      </TabsContent>
-      <TabsContent value="secretGen">
+      </TabsContent> */}
+      {/* <TabsContent value="secretGen">
         <SecretGenerator />
-      </TabsContent>
+      </TabsContent> */}
     </Tabs>
   );
 };
