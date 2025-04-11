@@ -21,70 +21,71 @@ export function BlockchainProvider({ children }) {
   const [events, setEvents] = useState([]);
   const { toast } = useToast();
 
+  // Handle account changes - moved outside setupWalletEventListeners to be accessible from polling
+  const handleAccountsChanged = (accounts) => {
+    console.log("Accounts changed:", accounts);
+    // Immediately clear events when account changes
+    setEvents([]);
+    
+    if (accounts.length > 0) {
+      // Completely reinitialize everything when account changes
+      (async () => {
+        try {
+          console.log("Reinitializing provider, signer, and contract for new account");
+          
+          // Create a fresh provider
+          const newProvider = new ethers.BrowserProvider(window.ethereum);
+          
+          // Get network
+          const network = await newProvider.getNetwork();
+          setChainId(network.chainId);
+          
+          // Create a fresh signer for the new account
+          const newSigner = await newProvider.getSigner();
+          
+          // Create a fresh contract
+          const newSwapContract = new ethers.Contract(swapAddress, swapAbi, newSigner);
+          
+          // Set all state
+          setProvider(newProvider);
+          setSigner(newSigner);
+          setSwapContract(newSwapContract);
+          setAccount(accounts[0]);
+          setIsConnected(true); // Make sure to set isConnected to true
+          
+          console.log("New signer address:", await newSigner.getAddress());
+          console.log("Updated state with new account:", accounts[0]);
+          
+          // Set up fresh event listeners with the new contract
+          listenForEvents(newSwapContract);
+          
+          // Fetch past events for the new account
+          fetchPastEvents(newSwapContract)
+            .then(pastEvents => {
+              if (pastEvents && pastEvents.length > 0) {
+                console.log(`Setting ${pastEvents.length} events after account change`);
+                setEvents(pastEvents);
+              }
+            })
+            .catch(error => {
+              console.error("Error fetching events after account change:", error);
+            });
+        } catch (error) {
+          console.error("Error reinitializing after account change:", error);
+          // In case of critical failure, try to disconnect
+          disconnectWallet();
+        }
+      })();
+    } else {
+      disconnectWallet();
+    }
+  };
+
   // Set up wallet event listeners
   const setupWalletEventListeners = () => {
     if (!window.ethereum) return;
     
     console.log("Setting up wallet event listeners");
-    
-    // Handle account changes
-    const handleAccountsChanged = (accounts) => {
-      console.log("Accounts changed:", accounts);
-      // Immediately clear events when account changes
-      setEvents([]);
-      
-      if (accounts.length > 0) {
-        // Completely reinitialize everything when account changes
-        (async () => {
-          try {
-            console.log("Reinitializing provider, signer, and contract for new account");
-            
-            // Create a fresh provider
-            const newProvider = new ethers.BrowserProvider(window.ethereum);
-            
-            // Get network
-            const network = await newProvider.getNetwork();
-            setChainId(network.chainId);
-            
-            // Create a fresh signer for the new account
-            const newSigner = await newProvider.getSigner();
-            
-            // Create a fresh contract
-            const newSwapContract = new ethers.Contract(swapAddress, swapAbi, newSigner);
-            
-            // Set all state
-            setProvider(newProvider);
-            setSigner(newSigner);
-            setSwapContract(newSwapContract);
-            setAccount(accounts[0]);
-            
-            console.log("New signer address:", await newSigner.getAddress());
-            console.log("Updated state with new account:", accounts[0]);
-            
-            // Set up fresh event listeners with the new contract
-            listenForEvents(newSwapContract);
-            
-            // Fetch past events for the new account
-            fetchPastEvents(newSwapContract)
-              .then(pastEvents => {
-                if (pastEvents && pastEvents.length > 0) {
-                  console.log(`Setting ${pastEvents.length} events after account change`);
-                  setEvents(pastEvents);
-                }
-              })
-              .catch(error => {
-                console.error("Error fetching events after account change:", error);
-              });
-          } catch (error) {
-            console.error("Error reinitializing after account change:", error);
-            // In case of critical failure, try to disconnect
-            disconnectWallet();
-          }
-        })();
-      } else {
-        disconnectWallet();
-      }
-    };
     
     // Handle chain changes
     const handleChainChanged = (_chainId) => {
@@ -1350,6 +1351,46 @@ export function BlockchainProvider({ children }) {
       
       // Set up wallet event listeners on initial load
       setupWalletEventListeners();
+      
+      // For sandboxed environments, add polling to detect account changes
+      const accountPoll = setInterval(async () => {
+        try {
+          if (window.ethereum) {
+            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+            // Only proceed if we have accounts
+            if (accounts && accounts.length > 0) {
+              const currentMetaMaskAccount = accounts[0];
+              const currentAppAccount = account;
+              
+              // Check if there's a mismatch between MetaMask's active account and our app state
+              if (currentMetaMaskAccount && 
+                  currentAppAccount && 
+                  currentMetaMaskAccount.toLowerCase() !== currentAppAccount.toLowerCase()) {
+                
+                console.log("Account change detected via polling", {
+                  appAccount: currentAppAccount,
+                  metaMaskAccount: currentMetaMaskAccount
+                });
+                
+                // Use the handleAccountsChanged function to update the account
+                handleAccountsChanged(accounts);
+              }
+            } else if (account && accounts.length === 0) {
+              // User disconnected all accounts in MetaMask
+              console.log("All accounts disconnected in MetaMask");
+              disconnectWallet();
+            }
+          }
+        } catch (error) {
+          console.error("Error in account polling:", error);
+        }
+      }, 1000); // Check every second
+      
+      // Add cleanup function for the polling interval
+      cleanupFunctions.push(() => {
+        clearInterval(accountPoll);
+        console.log("Cleared account polling interval");
+      });
       
       // Add cleanup function for wallet event listeners
       cleanupFunctions.push(() => {
